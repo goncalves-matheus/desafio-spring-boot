@@ -10,6 +10,7 @@ public class Consumer {
 
     @RabbitListener(queues = MenssagingConfig.QUEUE_NAME)
     public void consumeMessageFromQueue(ProductStatus productStatus){
-        System.out.println("Message recieve from queue:" + productStatus.toString());
+        System.out.println("\nMessage recieved from the queue: "+MenssagingConfig.QUEUE_NAME+":\n" 
+        + productStatus.toString());
     }
 }

@@ -16,7 +16,7 @@ public interface ProductRepository extends MongoRepository<Product, String>{
     @Query("{ $and: [ {'price':{$gte: ?0} }, {'price':{$lte: ?1} } ] }")
     List<Product> findbyMinAndMaxValues(Double min_price, Double max_price);
 
-    @Query("{  $and: [{$and: [ {'price':{$gte: ?0} }, {'price':{$lte: ?1} } ]},{$or: [ {'description': ?2}, {'name': ?2} ]}] }")
+    @Query("{ $and: [{$and: [ {'price':{$gte: ?0} }, {'price':{$lte: ?1} } ]},{$or: [ {'description': ?2}, {'name': ?2} ]}] }")
     List<Product> findbyNameDescriptionMinAndMaxValues(Double min_price, Double max_price, String q);
     
 }

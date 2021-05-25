@@ -25,6 +25,7 @@ import br.com.compasso.catalogodeprodutos.dto.ProductDto;
 import br.com.compasso.catalogodeprodutos.form.ProductForm;
 import br.com.compasso.catalogodeprodutos.model.Product;
 import br.com.compasso.catalogodeprodutos.model.ProductStatus;
+import br.com.compasso.catalogodeprodutos.model.Status;
 import br.com.compasso.catalogodeprodutos.rabbitmq.MenssagingConfig;
 import br.com.compasso.catalogodeprodutos.repository.ProductRepository;
 import io.swagger.annotations.Api;
@@ -36,6 +37,9 @@ import io.swagger.annotations.ApiOperation;
 @CrossOrigin(origins = "*")
 public class ProductsController {
     
+    private static final String DEFAULT_MIN_PRICE = "0.00";
+    private static final String DEFAULT_MAX_PRICE = "999999999.99";
+
     @Autowired
     private RabbitTemplate template;
 
@@ -51,8 +55,7 @@ public class ProductsController {
         repository.save(product);
         URI uri = uriBuilder.path("/products/{id}").buildAndExpand(product.getId()).toUri();
 
-        ProductStatus productStatus = new ProductStatus(product, "SAVED", "Product saved succesfully");
-        template.convertAndSend(MenssagingConfig.EXCHANGE_NAME, MenssagingConfig.ROUTING_KEY, productStatus);
+        sendMessage(new ProductStatus(product, Status.SAVED));
         
         return ResponseEntity.created(uri).body(new ProductDto(product));
     }
@@ -61,16 +64,18 @@ public class ProductsController {
     @ApiOperation(value = "Atualiza um produto do catálogo através da busca pelo ID")
     public ResponseEntity<ProductDto> updateProduct(@PathVariable String id,
             @RequestBody @Valid ProductForm productForm) {
+                
         Optional<Product> productOptional = repository.findById(id);
+
         if (productOptional.isPresent()) {
             Product updatatedProduct = productForm.update(productOptional.get());
             repository.save(updatatedProduct);
             
-            ProductStatus productStatus = new ProductStatus(updatatedProduct, "UPDATED", "Product updated succesfully");
-            template.convertAndSend(MenssagingConfig.EXCHANGE_NAME, MenssagingConfig.ROUTING_KEY, productStatus);
+            sendMessage(new ProductStatus(updatatedProduct, Status.UPDATED));
             
             return ResponseEntity.ok(new ProductDto(updatatedProduct));
         }
+        sendMessage( new ProductStatus(null, Status.UPDATE_ERROR));
         return ResponseEntity.notFound().build();
     }
 
@@ -93,8 +98,8 @@ public class ProductsController {
 
     @GetMapping("/search")
     @ApiOperation(value = "Busca por um produto a partir dos seu intervalo de preço, nome ou descrição")
-    public List<ProductDto> searchProduct(@RequestParam(defaultValue = "0.00") Double min_price,
-            @RequestParam(defaultValue = "999999999.99") Double max_price, @RequestParam(required = false) String q) {
+    public List<ProductDto> searchProduct(@RequestParam(defaultValue = DEFAULT_MIN_PRICE) Double min_price,
+            @RequestParam(defaultValue = DEFAULT_MAX_PRICE) Double max_price, @RequestParam(required = false) String q) {
         
         List<Product> products;
         if (q == null) {
@@ -114,6 +119,10 @@ public class ProductsController {
             return ResponseEntity.ok().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    private void sendMessage(ProductStatus productStatus) {
+        template.convertAndSend(MenssagingConfig.EXCHANGE_NAME, MenssagingConfig.ROUTING_KEY, productStatus);
     }
 
 }
