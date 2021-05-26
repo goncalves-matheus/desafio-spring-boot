@@ -1,4 +1,4 @@
-package br.com.compasso.catalogodeprodutos.rabbitmq;
+package br.com.compasso.catalogodeprodutos.config;
 
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.core.Binding;
@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class MenssagingConfig {
+public class RabbitMessageConfig {
     public static final String EXCHANGE_NAME = "catalog_exchange";
 	public static final String QUEUE_NAME = "catalog_queue";
 	public static final String ROUTING_KEY = "catalog_routingKey";

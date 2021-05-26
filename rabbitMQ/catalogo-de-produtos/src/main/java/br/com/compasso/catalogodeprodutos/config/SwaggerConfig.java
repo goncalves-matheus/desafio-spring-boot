@@ -1,4 +1,4 @@
-package br.com.compasso.catalogodeprodutos.swagger;
+package br.com.compasso.catalogodeprodutos.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

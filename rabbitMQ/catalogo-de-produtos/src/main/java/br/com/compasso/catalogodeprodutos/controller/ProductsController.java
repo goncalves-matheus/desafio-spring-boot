@@ -21,12 +21,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import br.com.compasso.catalogodeprodutos.config.RabbitMessageConfig;
 import br.com.compasso.catalogodeprodutos.dto.ProductDto;
 import br.com.compasso.catalogodeprodutos.form.ProductForm;
 import br.com.compasso.catalogodeprodutos.model.Product;
 import br.com.compasso.catalogodeprodutos.model.ProductStatus;
 import br.com.compasso.catalogodeprodutos.model.Status;
-import br.com.compasso.catalogodeprodutos.rabbitmq.MenssagingConfig;
 import br.com.compasso.catalogodeprodutos.repository.ProductRepository;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -48,15 +48,14 @@ public class ProductsController {
 
     @PostMapping
     @ApiOperation(value = "Cria um novo produto no catálogo e salva no banco não relacional")
-    public ResponseEntity<ProductDto> newProduct(@RequestBody @Valid ProductForm productForm,
+    public ResponseEntity<Object> newProduct(@RequestBody @Valid ProductForm productForm,
             UriComponentsBuilder uriBuilder) {
-
+       
         Product product = productForm.toProduct();
         repository.save(product);
+        sendMessage(product, Status.SAVED);
+    
         URI uri = uriBuilder.path("/products/{id}").buildAndExpand(product.getId()).toUri();
-
-        sendMessage(new ProductStatus(product, Status.SAVED));
-        
         return ResponseEntity.created(uri).body(new ProductDto(product));
     }
 
@@ -64,18 +63,17 @@ public class ProductsController {
     @ApiOperation(value = "Atualiza um produto do catálogo através da busca pelo ID")
     public ResponseEntity<ProductDto> updateProduct(@PathVariable String id,
             @RequestBody @Valid ProductForm productForm) {
-                
+
         Optional<Product> productOptional = repository.findById(id);
 
         if (productOptional.isPresent()) {
             Product updatatedProduct = productForm.update(productOptional.get());
             repository.save(updatatedProduct);
-            
-            sendMessage(new ProductStatus(updatatedProduct, Status.UPDATED));
+
+            sendMessage(updatatedProduct, Status.UPDATED);
             
             return ResponseEntity.ok(new ProductDto(updatatedProduct));
         }
-        sendMessage( new ProductStatus(null, Status.UPDATE_ERROR));
         return ResponseEntity.notFound().build();
     }
 
@@ -111,7 +109,7 @@ public class ProductsController {
     }
 
     @DeleteMapping("/{id}")
-    @ApiOperation(value = "Deleta um produto do catálogo a partir do seu Id")
+    @ApiOperation(value = "Deleta um produto do catálogo a partir do seu ID")
     public ResponseEntity<?> delete(@PathVariable String id) {
         Optional<Product> productOptional = repository.findById(id);
         if (productOptional.isPresent()) {
@@ -121,8 +119,9 @@ public class ProductsController {
         return ResponseEntity.notFound().build();
     }
 
-    private void sendMessage(ProductStatus productStatus) {
-        template.convertAndSend(MenssagingConfig.EXCHANGE_NAME, MenssagingConfig.ROUTING_KEY, productStatus);
+    public void sendMessage(Product product, Status status) {
+        ProductStatus productStatus = new ProductStatus(product, status);
+        template.convertAndSend(RabbitMessageConfig.EXCHANGE_NAME, RabbitMessageConfig.ROUTING_KEY, productStatus);
     }
 
 }

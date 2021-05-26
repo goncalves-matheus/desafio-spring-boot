@@ -1,11 +1,11 @@
 package br.com.compasso.catalogodeprodutos.validation;
 
-public class ImputError {
+public class InputError {
     
     private String status_code;
     private String message;
 
-    public ImputError(String status_code, String message) {
+    public InputError(String status_code, String message) {
         this.status_code = status_code;
         this.message = message;
     }
